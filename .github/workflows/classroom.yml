@@ -1,0 +1,91 @@
+name: Autograding Tests
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  autograde:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Compile
+      run: gcc main.c -o main.out
+
+    # ---------------------------
+    # Check fork usage
+    # ---------------------------
+    - name: Check fork() usage
+      run: |
+        if ! grep -q "fork(" main.c; then
+          echo "fork() not used"
+          exit 1
+        fi
+
+    # ---------------------------
+    # Check signal usage
+    # ---------------------------
+    - name: Check signal usage
+      run: |
+        if ! grep -E -q "signal\(|sigaction\(" main.c; then
+          echo "Signal handler not found"
+          exit 1
+        fi
+
+    # ---------------------------
+    # Functional Tests
+    # ---------------------------
+
+    - name: Test 1 (X=2, N=10)
+      run: |
+        output=$(timeout 20 ./main.out 2 10)
+        if [ "$output" != "1" ]; then exit 1; fi
+
+    - name: Test 2 (X=1, N=10)
+      run: |
+        output=$(timeout 20 ./main.out 1 10)
+        if [ "$output" != "0" ]; then exit 1; fi
+
+    - name: Test 3 (X=3, N=10)
+      run: |
+        output=$(timeout 20 ./main.out 3 10)
+        if [ "$output" != "1" ]; then exit 1; fi
+
+    - name: Test 4 (X=4, N=10)
+      run: |
+        output=$(timeout 20 ./main.out 4 10)
+        if [ "$output" != "0" ]; then exit 1; fi
+
+    - name: Test 5 (Prime with N < X)
+      run: |
+        output=$(timeout 20 ./main.out 49 5)
+        if [ "$output" != "1" ]; then exit 1; fi
+
+    - name: Test 6 (Composite with N < X)
+      run: |
+        output=$(timeout 20 ./main.out 121 7)
+        if [ "$output" != "1" ]; then exit 1; fi
+
+    - name: Test 7 (Prime with N > X)
+      run: |
+        output=$(timeout 20 ./main.out 97 200)
+        if [ "$output" != "1" ]; then exit 1; fi
+
+    - name: Test 8 (Composite with N > X)
+      run: |
+        output=$(timeout 20 ./main.out 100 200)
+        if [ "$output" != "0" ]; then exit 1; fi
+
+    - name: Test 9 (Large prime)
+      run: |
+        output=$(timeout 20 ./main.out 101 300)
+        if [ "$output" != "1" ]; then exit 1; fi
+
+    - name: Test 10 (Composite with non-trivial divisor)
+      run: |
+        output=$(timeout 20 ./main.out 221 300)
+        if [ "$output" != "0" ]; then exit 1; fi
